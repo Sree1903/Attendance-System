@@ -3,39 +3,55 @@ services:
   # URL: https://proxymuktbackend.onrender.com
   - type: web
     name: proxymuktbackend
-    env: node
+    runtime: node
     plan: free
     region: oregon
     rootDir: server
     buildCommand: npm ci
     startCommand: node src/server.js
+
     envVars:
       - key: NODE_ENV
         value: production
+
       - key: PORT
         value: 10000
+
       - key: CLIENT_URL
         value: https://proxymukt.onrender.com
-      # Secrets — set these in Render dashboard, not here:
-      # MONGODB_URI, JWT_SECRET, JWT_ACCESS_SECRET, JWT_REFRESH_SECRET, QR_SECRET
-      # ADMIN_NAME, ADMIN_EMAIL, ADMIN_PASSWORD
-      # ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET
-      # EMAIL_SERVICE, EMAIL_USER, EMAIL_PASSWORD, EMAIL_FROM
+
+      # Set these in the Render dashboard:
+      # MONGODB_URI
+      # JWT_SECRET
+      # JWT_ACCESS_SECRET
+      # JWT_REFRESH_SECRET
+      # QR_SECRET
+      # ADMIN_NAME
+      # ADMIN_EMAIL
+      # ADMIN_PASSWORD
+      # ZOOM_ACCOUNT_ID
+      # ZOOM_CLIENT_ID
+      # ZOOM_CLIENT_SECRET
+      # EMAIL_SERVICE
+      # EMAIL_USER
+      # EMAIL_PASSWORD
+      # EMAIL_FROM
+
     healthCheckPath: /health
     autoDeploy: true
 
-  # ── Frontend Static Site ──────────────────────────────────────────────────────
+  # ── Frontend Static Site ─────────────────────────────────────────────────────
   # URL: https://proxymukt.onrender.com
-  # SPA routing is handled by client/public/_redirects (checked after file lookup,
-  # so asset files like /assets/*.js are never intercepted).
   - type: web
     name: proxymukt
     runtime: static
-    plan: free
     rootDir: client
+
     buildCommand: npm install --production=false && node node_modules/vite/bin/vite.js build
     staticPublishPath: dist
+
     envVars:
       - key: VITE_API_URL
         value: https://proxymuktbackend.onrender.com/api
+
     autoDeploy: true
