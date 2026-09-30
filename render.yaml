@@ -1,8 +1,8 @@
 services:
   # ── Backend API ──────────────────────────────────────────────────────────────
-  # URL: https://proxymuktbackend.onrender.com
+  # URL: https://campus-attendance-api.onrender.com
   - type: web
-    name: attendance-api
+    name: campus-attendance-api
     runtime: node
     plan: free
     region: oregon
@@ -18,7 +18,7 @@ services:
         value: 10000
 
       - key: CLIENT_URL
-        value: https://proxymukt.onrender.com
+        value: https://campus-attendance.onrender.com
 
       # Set these in the Render dashboard:
       # MONGODB_URI
@@ -41,9 +41,9 @@ services:
     autoDeploy: true
 
   # ── Frontend Static Site ─────────────────────────────────────────────────────
-  # URL: https://proxymukt.onrender.com
+  # URL: https://campus-attendance.onrender.com
   - type: web
-    name: attendance-web
+    name: campus-attendance
     runtime: static
     rootDir: client
 
@@ -52,6 +52,6 @@ services:
 
     envVars:
       - key: VITE_API_URL
-        value: https://proxymuktbackend.onrender.com/api
+        value: https://campus-attendance-api.onrender.com/api
 
     autoDeploy: true
