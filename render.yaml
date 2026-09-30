@@ -2,7 +2,7 @@ services:
   # ── Backend API ──────────────────────────────────────────────────────────────
   # URL: https://proxymuktbackend.onrender.com
   - type: web
-    name: proxymuktbackend
+    name: attendance-api
     runtime: node
     plan: free
     region: oregon
@@ -43,7 +43,7 @@ services:
   # ── Frontend Static Site ─────────────────────────────────────────────────────
   # URL: https://proxymukt.onrender.com
   - type: web
-    name: proxymukt
+    name: attendance-web
     runtime: static
     rootDir: client
 
