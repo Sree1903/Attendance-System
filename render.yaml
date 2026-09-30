@@ -5,7 +5,7 @@ services:
     name: campus-attendance-api
     runtime: node
     plan: free
-    region: oregon
+    region: singapore
     rootDir: server
     buildCommand: npm ci
     startCommand: node src/server.js
