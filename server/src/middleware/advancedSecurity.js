@@ -237,6 +237,7 @@ export function apiKeyMiddleware(req, res, next) {
  * Sanitize user input
  */
 export function sanitizeInput(input) {
+  // Handle strings
   if (typeof input === 'string') {
     return input
       .replace(/[<>]/g, '') // Remove < and >
@@ -245,11 +246,19 @@ export function sanitizeInput(input) {
       .trim();
   }
 
+  // IMPORTANT: Preserve arrays as arrays
+  if (Array.isArray(input)) {
+    return input.map(item => sanitizeInput(item));
+  }
+
+  // Handle objects
   if (typeof input === 'object' && input !== null) {
     const sanitized = {};
+
     for (const [key, value] of Object.entries(input)) {
       sanitized[key] = sanitizeInput(value);
     }
+
     return sanitized;
   }
 
