@@ -25,16 +25,16 @@ import { generateQRToken, getQRRotationInterval } from './utils/qr.js';
 import { setIO } from './utils/ioManager.js';
 
 // FANG-Level Middleware Imports
-import { 
-  contentSecurityPolicy, 
-  securityHeaders, 
+import {
+  contentSecurityPolicy,
+  securityHeaders,
   sanitizeMiddleware,
-  suspiciousPatternMiddleware 
+  suspiciousPatternMiddleware
 } from './middleware/advancedSecurity.js';
-import { 
-  etagMiddleware, 
+import {
+  etagMiddleware,
   responseTimeMiddleware,
-  responseHelpersMiddleware 
+  responseHelpersMiddleware
 } from './middleware/responseOptimization.js';
 import { circuitBreakerMiddleware, getCircuitBreakerHealth } from './utils/circuitBreaker.js';
 import { getConnectionStats } from './utils/ioManager.js';
@@ -53,6 +53,7 @@ const io = new Server(httpServer, {
     origin: process.env.CLIENT_URL || 'http://localhost:5173',
     credentials: true,
   },
+
   // WebSocket optimization
   pingTimeout: 60000,
   pingInterval: 25000,
@@ -82,28 +83,40 @@ app.use(helmet({
 const allowedOrigins = [
   process.env.CLIENT_URL,
   'http://localhost:5173',
-  'http://localhost:3000',
-  'https://proxymukt.onrender.com',
-  'https://proxymuktbackend.onrender.com'
+  'http://localhost:3000'
 ].filter(Boolean);
 
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+
+    if (
+      allowedOrigins.indexOf(origin) !== -1 ||
+      process.env.NODE_ENV === 'development'
+    ) {
       callback(null, true);
     } else {
       console.warn(`⚠️ CORS blocked origin: ${origin}`);
+
       // Return error but don't crash the server
       callback(new Error('Not allowed by CORS'), false);
     }
   },
+
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-CSRF-Token'],
-  exposedHeaders: ['X-Response-Time', 'X-RateLimit-Limit', 'X-RateLimit-Remaining'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'X-CSRF-Token'
+  ],
+  exposedHeaders: [
+    'X-Response-Time',
+    'X-RateLimit-Limit',
+    'X-RateLimit-Remaining'
+  ],
   maxAge: 86400, // 24 hours
   preflightContinue: false,
   optionsSuccessStatus: 204
@@ -135,6 +148,7 @@ const limiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
 app.use('/api/', limiter);
 
 // ============================================
@@ -153,7 +167,7 @@ app.get('/health', (_req, res) => {
     circuitBreakers: getCircuitBreakerHealth(),
     websockets: getConnectionStats()
   };
-  
+
   res.json(health);
 });
 
@@ -168,7 +182,7 @@ app.get('/metrics', (_req, res) => {
     circuitBreakers: getCircuitBreakerHealth(),
     websockets: getConnectionStats()
   };
-  
+
   res.json(metrics);
 });
 
@@ -177,7 +191,7 @@ app.get('/metrics', (_req, res) => {
 // ============================================
 
 app.get('/api', (_req, res) => {
-  res.json({ 
+  res.json({
     message: 'ProxyMukt Attendance System API',
     version: '2.0.0',
     features: [
@@ -193,8 +207,8 @@ app.get('/api', (_req, res) => {
 });
 
 app.get('/api/test', (_req, res) => {
-  res.json({ 
-    message: 'API is working', 
+  res.json({
+    message: 'API is working',
     timestamp: new Date().toISOString(),
     responseTime: res.getHeader('X-Response-Time')
   });
@@ -221,7 +235,8 @@ app.use('/api/ip-whitelist', ipWhitelistRoutes);
 // Catch-all for undefined API routes
 app.use('/api/*', (req, res) => {
   console.warn(`⚠️ 404 - API endpoint not found: ${req.method} ${req.path}`);
-  res.status(404).json({ 
+
+  res.status(404).json({
     success: false,
     message: 'API endpoint not found',
     path: req.path,
@@ -244,7 +259,7 @@ app.get('/', (_req, res) => {
     message: 'ProxyMukt API Server',
     version: '2.0.0',
     status: 'running',
-    frontend: 'https://proxymukt.onrender.com',
+    frontend: process.env.CLIENT_URL || 'http://localhost:5173',
     timestamp: new Date().toISOString(),
   });
 });
@@ -254,25 +269,28 @@ app.use('*', (_req, res) => {
   res.status(404).json({
     success: false,
     message: 'Route not found. This is an API-only server.',
-    hint: 'Frontend: https://proxymukt.onrender.com',
+    hint: `Frontend: ${process.env.CLIENT_URL || 'http://localhost:5173'}`,
   });
 });
 
 // Error handler (must be last)
 app.use(errorHandler);
 
-// Socket.IO for real-time QR updates and alerts
+// ============================================
+// SOCKET.IO FOR REAL-TIME QR UPDATES
+// ============================================
+
 const activeSessions = new Map();
 const adminConnections = new Map(); // Track admin connections for alerts
 
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
-  
+
   // Handle connection errors
   socket.on('error', (error) => {
     console.error('Socket error:', error);
   });
-  
+
   // Admin joins alerts namespace
   socket.on('admin-join-alerts', (adminId) => {
     try {
@@ -280,56 +298,66 @@ io.on('connection', (socket) => {
         console.warn('Admin join attempted without adminId');
         return;
       }
+
       socket.join(`admin-${adminId}`);
       adminConnections.set(adminId, socket.id);
+
       console.log(`Admin ${adminId} joined alerts namespace`);
     } catch (error) {
       console.error('Error in admin-join-alerts:', error);
     }
   });
-  
+
   socket.on('join-session', (sessionId) => {
     try {
       if (!sessionId) {
         console.warn('Join session attempted without sessionId');
         return;
       }
-      
+
       socket.join(`session-${sessionId}`);
-      
+
       if (!activeSessions.has(sessionId)) {
         const interval = setInterval(() => {
           try {
             const qrToken = generateQRToken(sessionId);
-            io.to(`session-${sessionId}`).emit('qr-update', { qrToken });
+
+            io.to(`session-${sessionId}`).emit('qr-update', {
+              qrToken
+            });
           } catch (error) {
             console.error('Error generating QR token:', error);
           }
         }, getQRRotationInterval());
-        
+
         activeSessions.set(sessionId, interval);
-        
+
         // Send initial QR
         const qrToken = generateQRToken(sessionId);
-        socket.emit('qr-update', { qrToken });
+
+        socket.emit('qr-update', {
+          qrToken
+        });
       }
     } catch (error) {
       console.error('Error in join-session:', error);
     }
   });
-  
+
   socket.on('leave-session', (sessionId) => {
     try {
       if (!sessionId) {
         console.warn('Leave session attempted without sessionId');
         return;
       }
-      
+
       socket.leave(`session-${sessionId}`);
-      
+
       const room = io.sockets.adapter.rooms.get(`session-${sessionId}`);
+
       if (!room || room.size === 0) {
         const interval = activeSessions.get(sessionId);
+
         if (interval) {
           clearInterval(interval);
           activeSessions.delete(sessionId);
@@ -339,9 +367,15 @@ io.on('connection', (socket) => {
       console.error('Error in leave-session:', error);
     }
   });
-  
+
   socket.on('disconnect', (reason) => {
-    console.log('Client disconnected:', socket.id, 'Reason:', reason);
+    console.log(
+      'Client disconnected:',
+      socket.id,
+      'Reason:',
+      reason
+    );
+
     try {
       // Remove admin from connections
       for (const [adminId, socketId] of adminConnections.entries()) {
@@ -372,10 +406,14 @@ httpServer.listen(PORT, () => {
   console.log(`📡 Health check: http://localhost:${PORT}/health`);
 });
 
-// Global error handlers
+// ============================================
+// GLOBAL ERROR HANDLERS
+// ============================================
+
 process.on('uncaughtException', (error) => {
   console.error('❌ Uncaught Exception:', error);
   console.error('Stack:', error.stack);
+
   // Log but don't exit in production to maintain service availability
   if (process.env.NODE_ENV !== 'production') {
     process.exit(1);
@@ -383,34 +421,43 @@ process.on('uncaughtException', (error) => {
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  // Log but don't exit in production to maintain service availability
+  console.error(
+    '❌ Unhandled Rejection at:',
+    promise,
+    'reason:',
+    reason
+  );
+
   if (reason instanceof Error) {
     console.error('Stack:', reason.stack);
   }
 });
 
-// Graceful shutdown
+// ============================================
+// GRACEFUL SHUTDOWN
+// ============================================
+
 process.on('SIGTERM', () => {
   console.log('👋 SIGTERM received, shutting down gracefully');
-  
+
   // Clear all active session intervals
   for (const [sessionId, interval] of activeSessions.entries()) {
     clearInterval(interval);
     console.log(`Cleared interval for session ${sessionId}`);
   }
+
   activeSessions.clear();
-  
+
   // Close all socket connections
   io.close(() => {
     console.log('✅ Socket.IO connections closed');
   });
-  
+
   httpServer.close(() => {
     console.log('✅ Server closed');
     process.exit(0);
   });
-  
+
   // Force close after 10 seconds
   setTimeout(() => {
     console.error('⚠️ Forced shutdown after timeout');
@@ -420,23 +467,24 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('👋 SIGINT received, shutting down gracefully');
-  
+
   // Clear all active session intervals
   for (const [sessionId, interval] of activeSessions.entries()) {
     clearInterval(interval);
   }
+
   activeSessions.clear();
-  
+
   // Close all socket connections
   io.close(() => {
     console.log('✅ Socket.IO connections closed');
   });
-  
+
   httpServer.close(() => {
     console.log('✅ Server closed');
     process.exit(0);
   });
-  
+
   // Force close after 10 seconds
   setTimeout(() => {
     console.error('⚠️ Forced shutdown after timeout');
