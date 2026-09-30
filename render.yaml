@@ -30,9 +30,8 @@ services:
   # so asset files like /assets/*.js are never intercepted).
   - type: web
     name: proxymukt
-    env: static
+    runtime: static
     plan: free
-    region: oregon
     rootDir: client
     buildCommand: npm install --production=false && node node_modules/vite/bin/vite.js build
     staticPublishPath: dist
