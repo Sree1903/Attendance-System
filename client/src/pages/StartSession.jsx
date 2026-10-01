@@ -923,7 +923,7 @@ export default function StartSession() {
                 </div>
               ) : qrEnabled ? (
                 <div className="flex justify-center">
-                  <QRDisplay token={qrToken} rotationInterval={20000} />
+                  <QRDisplay token={qrToken} rotationInterval={60000} />
                 </div>
               ) : (
                 <div className="text-center py-16">
