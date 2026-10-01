@@ -208,6 +208,21 @@ export default function FacultyDashboard() {
 
   const handleStartSession = async (e) => {
     e.preventDefault();
+
+    // Location verification requires a real location before a session can start.
+    if (
+      sessionData.sessionType === 'offline' &&
+      sessionData.locationVerification &&
+      (
+        !sessionData.location ||
+        typeof sessionData.location.latitude !== 'number' ||
+        typeof sessionData.location.longitude !== 'number'
+      )
+    ) {
+      alert('Please click "Get Current Location" before starting a session with location verification enabled.');
+      return;
+    }
+
     try {
       // Create regular session first with verification settings
       const { data } = await axiosInstance.post('/sessions', {
@@ -425,37 +440,30 @@ export default function FacultyDashboard() {
               </div>
             )}
 
-           {/* Quick Actions Bar */}
-<div className="flex flex-wrap gap-3 mb-8">
-
-  {/* View Analytics */}
-  <button
-    onClick={() => navigate('/faculty/analytics')}
-    className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
-  >
-    <BarChart3 size={18} />
-    <span>View Analytics</span>
-  </button>
-
-  {/* Manage Students */}
-  <button
-    onClick={() => navigate('/faculty/students')}
-    className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
-  >
-    <Users size={18} />
-    <span>Manage Students</span>
-  </button>
-
-  {/* View Alerts */}
-  <button
-    onClick={() => navigate('/faculty/alerts')}
-    className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
-  >
-    <Bell size={18} />
-    <span>View Alerts</span>
-  </button>
-
-</div>
+            {/* Quick Actions Bar */}
+            <div className="flex flex-wrap gap-3 mb-8">
+              <button
+                onClick={() => navigate('/analytics')}
+                className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
+              >
+                <BarChart3 size={18} />
+                <span>View Analytics</span>
+              </button>
+              <button
+                onClick={() => navigate('/analytics')}
+                className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
+              >
+                <Users size={18} />
+                <span>Manage Students</span>
+              </button>
+              <button
+                onClick={() => navigate('/analytics')}
+                className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
+              >
+                <Bell size={18} />
+                <span>View Alerts</span>
+              </button>
+            </div>
             
             {showCreateClass && (
               <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
@@ -680,9 +688,18 @@ export default function FacultyDashboard() {
                     )}
 
                     <div className="flex space-x-3 pt-4">
-                      <button 
-                        type="submit" 
-                        className="flex-1 px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl transition-all font-bold flex items-center justify-center gap-2"
+                      <button
+                        type="submit"
+                        disabled={
+                          sessionData.sessionType === 'offline' &&
+                          sessionData.locationVerification &&
+                          (
+                            !sessionData.location ||
+                            typeof sessionData.location.latitude !== 'number' ||
+                            typeof sessionData.location.longitude !== 'number'
+                          )
+                        }
+                        className="flex-1 px-6 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl transition-all font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-purple-600 disabled:hover:to-indigo-600"
                       >
                         <span>🚀</span>
                         <span>Start Session</span>
