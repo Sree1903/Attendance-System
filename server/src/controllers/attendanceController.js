@@ -20,7 +20,7 @@ import { getIO, emitAttendanceMarked } from '../utils/ioManager.js';
  */
 export const checkNearbySession = async (req, res) => {
   try {
-    const { latitude, longitude } = req.body;
+    const { latitude, longitude, accuracy } = req.body;
 
     if (!validateCoordinates(latitude, longitude)) {
       return res.status(400).json({
@@ -58,23 +58,31 @@ export const checkNearbySession = async (req, res) => {
       if (!isEnrolled) continue;
 
       // Distance check — only if session has coordinates set by faculty
-      let distance = null;
-      let withinRange = true; // default: allow if no coordinates configured
+    let distance = null;
+let withinRange = true;
+let locationVerificationReason =
+  'Location not configured for this session';
 
-      if (session.location?.latitude && session.location?.longitude) {
-        const verification = verifyGeofence(session.location, { latitude, longitude });
-        distance = verification.distance;
-        withinRange = verification.verified;
-      }
+if (session.location?.latitude && session.location?.longitude) {
+  const verification = verifyGeofence(session.location, {
+    latitude,
+    longitude,
+    accuracy,
+  });
 
+  distance = verification.distance;
+  withinRange = verification.verified;
+  locationVerificationReason = verification.reason;
+}
       const effectiveDistance = distance ?? 0;
       if (effectiveDistance < minDistance) {
         minDistance = effectiveDistance;
-        nearestSession = {
-          ...session.toObject(),
-          distance,
-          withinRange,
-        };
+       nearestSession = {
+  ...session.toObject(),
+  distance,
+  withinRange,
+  locationVerificationReason,
+};
       }
     }
 
@@ -96,12 +104,15 @@ export const checkNearbySession = async (req, res) => {
 
     res.json({
       success: true,
-      data: {
-        session: nearestSession,
-        distance: nearestSession.distance,
-        withinRange: nearestSession.withinRange,
-        alreadyMarked: !!existingAttendance,
-      },
+    data: {
+  session: nearestSession,
+  distance: nearestSession.distance,
+  withinRange: nearestSession.withinRange,
+  locationAccuracy: accuracy ?? null,
+  locationVerificationReason:
+    nearestSession.locationVerificationReason || null,
+  alreadyMarked: !!existingAttendance,
+},
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
