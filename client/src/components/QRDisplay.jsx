@@ -2,7 +2,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useEffect, useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 
-export default function QRDisplay({ token, rotationInterval = 20000 }) {
+export default function QRDisplay({ token, rotationInterval = 60000 }) {
   const [timeLeft, setTimeLeft] = useState(rotationInterval / 1000);
   
   useEffect(() => {
