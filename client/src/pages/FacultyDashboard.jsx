@@ -443,21 +443,21 @@ export default function FacultyDashboard() {
             {/* Quick Actions Bar */}
             <div className="flex flex-wrap gap-3 mb-8">
               <button
-                onClick={() => navigate('/analytics')}
+                onClick={() => navigate('/faculty/analytics')}
                 className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
               >
                 <BarChart3 size={18} />
                 <span>View Analytics</span>
               </button>
               <button
-                onClick={() => navigate('/analytics')}
+                onClick={() => navigate('/faculty/students')}
                 className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
               >
                 <Users size={18} />
                 <span>Manage Students</span>
               </button>
               <button
-                onClick={() => navigate('/analytics')}
+                onClick={() => navigate('/faculty/alerts)}
                 className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
               >
                 <Bell size={18} />
