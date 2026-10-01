@@ -442,7 +442,7 @@ export default function FacultyDashboard() {
                 <span>Manage Students</span>
               </button>
               <button
-                onClick={() => navigate('/analytics')}
+                onClick={() => navigate('/alerts')}
                 className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-2"
               >
                 <Bell size={18} />
