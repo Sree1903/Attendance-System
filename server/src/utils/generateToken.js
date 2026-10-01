@@ -16,7 +16,7 @@ export const generateAccessToken = (userId, role) => {
   return jwt.sign(
     { userId, role },
     getAccessSecret(),
-    { expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m' }
+    { expiresIn: process.env.JWT_ACCESS_EXPIRY || '7d' }
   );
 };
 
