@@ -241,39 +241,217 @@ export default function ScanQR() {
   };
 
   // ── Location step ────────────────────────────────────────────
+  // Collect multiple readings instead of trusting a single GPS fix.
+  // Temporary POSITION_UNAVAILABLE / TIMEOUT errors do not immediately
+  // fail verification. We keep listening until the attempt finishes and
+  // return the reading with the best reported accuracy.
   const getLocationData = () =>
     new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
         reject(new Error('Geolocation not supported'));
         return;
       }
-      navigator.geolocation.getCurrentPosition(
-        (pos) =>
-          resolve({
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            accuracy: pos.coords.accuracy,
-            timestamp: pos.timestamp,
-          }),
-        (err) => reject(err),
-        { enableHighAccuracy: true, timeout: LOCATION_TIMEOUT, maximumAge: 0 }
+
+      const watchDuration = Math.max(15000, Number(LOCATION_TIMEOUT) || 0);
+      const fallbackTimeout = 10000;
+
+      let watchId = null;
+      let finishTimer = null;
+      let finished = false;
+      let fallbackStarted = false;
+      let bestPosition = null;
+
+      const PERMISSION_DENIED = 1;
+      const POSITION_UNAVAILABLE = 2;
+      const TIMEOUT = 3;
+
+      const cleanup = () => {
+        if (watchId !== null) {
+          navigator.geolocation.clearWatch(watchId);
+          watchId = null;
+        }
+
+        if (finishTimer !== null) {
+          clearTimeout(finishTimer);
+          finishTimer = null;
+        }
+      };
+
+      const finishWithBest = () => {
+        if (finished) return;
+
+        finished = true;
+        cleanup();
+
+        if (!bestPosition) {
+          reject(new Error('Location information unavailable'));
+          return;
+        }
+
+        resolve({
+          latitude: bestPosition.coords.latitude,
+          longitude: bestPosition.coords.longitude,
+          accuracy: bestPosition.coords.accuracy,
+          timestamp: bestPosition.timestamp,
+        });
+      };
+
+      const startFallback = () => {
+        if (finished || fallbackStarted) return;
+
+        if (bestPosition) {
+          finishWithBest();
+          return;
+        }
+
+        fallbackStarted = true;
+
+        // Some mobile browsers can fail to obtain a high-accuracy fix
+        // even though normal browser location is available. Try a normal
+        // location request before giving up completely.
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            if (
+              !bestPosition ||
+              Number(position.coords.accuracy) <
+                Number(bestPosition.coords.accuracy)
+            ) {
+              bestPosition = position;
+            }
+            finishWithBest();
+          },
+          () => {
+            finishWithBest();
+          },
+          {
+            enableHighAccuracy: false,
+            timeout: fallbackTimeout,
+            maximumAge: 0,
+          }
+        );
+      };
+
+      const handlePosition = (position) => {
+        if (finished) return;
+
+        const accuracy = Number(position.coords.accuracy);
+
+        if (
+          !bestPosition ||
+          (Number.isFinite(accuracy) &&
+            accuracy < Number(bestPosition.coords.accuracy))
+        ) {
+          bestPosition = position;
+
+          setMessage(
+            `📍 Improving location accuracy... Current: ±${Math.round(
+              accuracy
+            )}m`
+          );
+          setMessageType('info');
+
+          // Stop early when the device reports a strong GPS fix.
+          if (Number.isFinite(accuracy) && accuracy <= 20) {
+            finishWithBest();
+          }
+        }
+      };
+
+      const handleError = (error) => {
+        if (finished) return;
+
+        // Permission denied is a definitive permission problem.
+        if (error.code === PERMISSION_DENIED) {
+          finished = true;
+          cleanup();
+          reject(new Error('Location permission denied'));
+          return;
+        }
+
+        // POSITION_UNAVAILABLE can be temporary on mobile. Keep the
+        // watcher alive so a later reading can still succeed.
+        if (error.code === POSITION_UNAVAILABLE) {
+          setMessage('📡 GPS is temporarily unavailable. Trying again...');
+          setMessageType('info');
+          return;
+        }
+
+        // For timeout, try the fallback location provider/request.
+        if (error.code === TIMEOUT) {
+          setMessage(
+            '📡 GPS is taking longer than expected. Trying another location method...'
+          );
+          setMessageType('info');
+          startFallback();
+        }
+      };
+
+      setMessage('📍 Getting your most accurate location...');
+      setMessageType('info');
+
+      watchId = navigator.geolocation.watchPosition(
+        handlePosition,
+        handleError,
+        {
+          enableHighAccuracy: true,
+          timeout: watchDuration,
+          maximumAge: 0,
+        }
       );
+
+      // Give high-accuracy location time to settle. If no fix arrives,
+      // use the fallback request rather than failing immediately.
+      finishTimer = setTimeout(() => {
+        if (bestPosition) {
+          finishWithBest();
+        } else {
+          startFallback();
+        }
+      }, watchDuration);
     });
 
   const doLocationStep = async (idx, stepsArray) => {
     try {
       const loc = await getLocationData();
-      resultsRef.current.locationVerification = { verified: true, location: loc };
+
+      resultsRef.current.locationVerification = {
+        verified: true,
+        location: loc,
+      };
+
       const nextIdx = idx + 1;
       stepIdxRef.current = nextIdx;
-      setCompletedSteps((prev) => [...prev, 'locationVerification']);
-      setMessage('✅ Location verified!');
+
+      setCompletedSteps((prev) => [
+        ...prev,
+        'locationVerification',
+      ]);
+
+      setMessage(
+        `✅ Location acquired! GPS accuracy: ±${Math.round(
+          loc.accuracy
+        )}m`
+      );
       setMessageType('success');
-      setTimeout(() => runStep(nextIdx, stepsArray), VERIFICATION_STEP_DELAY);
-    } catch {
-      // Don't advance stepIdx on failure so retry re-runs the same step
+
+      setTimeout(
+        () => runStep(nextIdx, stepsArray),
+        VERIFICATION_STEP_DELAY
+      );
+    } catch (error) {
+      // Don't advance stepIdx on failure so retry re-runs the same step.
       setPhase('location_failed');
-      setMessage('❌ Location access failed. Please enable location and retry.');
+
+      if (error?.message === 'Location permission denied') {
+        setMessage(
+          '❌ Location permission denied. Please allow location access in your browser settings and retry.'
+        );
+      } else {
+        setMessage(
+          '❌ Could not obtain your location. Please make sure phone Location is ON and retry.'
+        );
+      }
+
       setMessageType('error');
     }
   };
@@ -307,7 +485,7 @@ export default function ScanQR() {
       setPhase('done');
       setCompletedSteps(allSteps.map((s) => s.type));
       setMessage(
-        `🎉 Attendance Marked!\n📚 ${data.data.sessionTitle}\n🏫 ${data.data.className}\n👤 ${data.data.studentName}`
+        `🎉 Attendance Marked!\n📚 ${data.data.sessionTitle}\n🏫 ${data.data.className}\n👤 ${data.data.studentName}\n📍 GPS Accuracy: ±${Math.round(r.locationVerification?.location?.accuracy || 0)}m`
       );
       setMessageType('success');
 
