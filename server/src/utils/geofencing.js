@@ -3,7 +3,26 @@
  * Implements Haversine formula for accurate distance calculation
  */
 
-import { EARTH_RADIUS_METERS, DEFAULT_GEOFENCE_RADIUS, UNREALISTIC_ACCURACY_THRESHOLD, UNREALISTIC_SPEED_THRESHOLD, SPOOFING_SCORE_ACCURACY, SPOOFING_SCORE_SPEED, SPOOFING_SCORE_MOCK, SPOOFING_FLAG_THRESHOLD, SPOOFING_BLOCK_THRESHOLD } from '../config/constants.js';
+import {
+  EARTH_RADIUS_METERS,
+  DEFAULT_GEOFENCE_RADIUS,
+  UNREALISTIC_ACCURACY_THRESHOLD,
+  UNREALISTIC_SPEED_THRESHOLD,
+  SPOOFING_SCORE_ACCURACY,
+  SPOOFING_SCORE_SPEED,
+  SPOOFING_SCORE_MOCK,
+  SPOOFING_FLAG_THRESHOLD,
+  SPOOFING_BLOCK_THRESHOLD,
+} from '../config/constants.js';
+
+/*
+ * Maximum GPS accuracy uncertainty we will accept when
+ * a location is being used for geofence verification.
+ *
+ * This is a product-level threshold, not a guarantee of
+ * physical GPS precision.
+ */
+const MAX_GEOFENCE_ACCURACY = 50;
 
 /**
  * Calculate distance between two coordinates using Haversine formula
@@ -13,46 +32,94 @@ import { EARTH_RADIUS_METERS, DEFAULT_GEOFENCE_RADIUS, UNREALISTIC_ACCURACY_THRE
  * @param {number} lon2 - Longitude of point 2
  * @returns {number} Distance in meters
  */
-export const calculateDistance = (lat1, lon1, lat2, lon2) => {
+export const calculateDistance = (
+  lat1,
+  lon1,
+  lat2,
+  lon2
+) => {
   const R = EARTH_RADIUS_METERS;
+
   const φ1 = (lat1 * Math.PI) / 180;
   const φ2 = (lat2 * Math.PI) / 180;
+
   const Δφ = ((lat2 - lat1) * Math.PI) / 180;
   const Δλ = ((lon2 - lon1) * Math.PI) / 180;
 
   const a =
     Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    Math.cos(φ1) *
+      Math.cos(φ2) *
+      Math.sin(Δλ / 2) *
+      Math.sin(Δλ / 2);
 
-  return R * c; // Distance in meters
+  const c =
+    2 * Math.atan2(
+      Math.sqrt(a),
+      Math.sqrt(1 - a)
+    );
+
+  return R * c;
 };
 
 /**
  * Verify if student location is within geofence
- * @param {Object} sessionLocation - Session location with lat, lon, radius
- * @param {Object} studentLocation - Student location with lat, lon
- * @returns {Object} Verification result with status and distance
+ *
+ * The verification now considers:
+ * 1. Distance from the session location
+ * 2. Reported GPS accuracy
+ *
+ * @param {Object} sessionLocation
+ * @param {Object} studentLocation
+ * @returns {Object} Verification result
  */
-export const verifyGeofence = (sessionLocation, studentLocation) => {
-  // Check if location data is available
-  if (!sessionLocation || !sessionLocation.latitude || !sessionLocation.longitude) {
+export const verifyGeofence = (
+  sessionLocation,
+  studentLocation
+) => {
+  // ----------------------------------------------------
+  // 1. Check whether the session has a geofence
+  // ----------------------------------------------------
+
+  if (
+    !sessionLocation ||
+    typeof sessionLocation.latitude !== 'number' ||
+    typeof sessionLocation.longitude !== 'number'
+  ) {
     return {
-      verified: true, // Allow if geofencing not configured
-      reason: 'Geofencing not configured for this session',
+      verified: true,
+      reason:
+        'Geofencing not configured for this session',
       distance: null,
+      radius: null,
+      accuracy: null,
     };
   }
 
-  if (!studentLocation || !studentLocation.latitude || !studentLocation.longitude) {
+  // ----------------------------------------------------
+  // 2. Check whether the student's location exists
+  // ----------------------------------------------------
+
+  if (
+    !studentLocation ||
+    typeof studentLocation.latitude !== 'number' ||
+    typeof studentLocation.longitude !== 'number'
+  ) {
     return {
       verified: false,
       reason: 'Student location not provided',
       distance: null,
+      radius:
+        sessionLocation.radius ||
+        DEFAULT_GEOFENCE_RADIUS,
+      accuracy: null,
     };
   }
 
-  // Calculate distance
+  // ----------------------------------------------------
+  // 3. Calculate distance
+  // ----------------------------------------------------
+
   const distance = calculateDistance(
     sessionLocation.latitude,
     sessionLocation.longitude,
@@ -60,18 +127,81 @@ export const verifyGeofence = (sessionLocation, studentLocation) => {
     studentLocation.longitude
   );
 
-  const radius = sessionLocation.radius || DEFAULT_GEOFENCE_RADIUS; // Default radius from constants
+  const radius =
+    sessionLocation.radius ||
+    DEFAULT_GEOFENCE_RADIUS;
 
-  // Verify if within radius
+  // ----------------------------------------------------
+  // 4. Read GPS accuracy
+  // ----------------------------------------------------
+
+  const rawAccuracy = Number(
+    studentLocation.accuracy
+  );
+
+  const hasAccuracy =
+    Number.isFinite(rawAccuracy) &&
+    rawAccuracy >= 0;
+
+  const accuracy = hasAccuracy
+    ? rawAccuracy
+    : null;
+
+  // ----------------------------------------------------
+  // 5. Reject very inaccurate location readings
+  // ----------------------------------------------------
+  //
+  // Example:
+  //
+  // Geofence = 100m
+  // Student GPS accuracy = ±150m
+  //
+  // We cannot confidently use that reading for a
+  // 100m geofence.
+  //
+  // We therefore ask the student to use Precise Location.
+  // ----------------------------------------------------
+
+  if (
+    accuracy !== null &&
+    accuracy > MAX_GEOFENCE_ACCURACY
+  ) {
+    return {
+      verified: false,
+      distance: Math.round(distance),
+      radius,
+      accuracy: Math.round(accuracy),
+      reason:
+        `GPS accuracy is too low (±${Math.round(
+          accuracy
+        )}m). Enable Precise Location and try again.`,
+    };
+  }
+
+  // ----------------------------------------------------
+  // 6. Verify the actual geofence distance
+  // ----------------------------------------------------
+
   const verified = distance <= radius;
+
+  // ----------------------------------------------------
+  // 7. Return complete verification result
+  // ----------------------------------------------------
 
   return {
     verified,
     distance: Math.round(distance),
     radius,
+    accuracy:
+      accuracy !== null
+        ? Math.round(accuracy)
+        : null,
+
     reason: verified
       ? 'Location verified successfully'
-      : `Outside geofence boundary (${Math.round(distance)}m away, allowed: ${radius}m)`,
+      : `Outside geofence boundary (${Math.round(
+          distance
+        )}m away, allowed: ${radius}m)`,
   };
 };
 
@@ -80,10 +210,27 @@ export const verifyGeofence = (sessionLocation, studentLocation) => {
  * @param {number} accuracy - GPS accuracy in meters
  * @returns {string} Accuracy status
  */
-export const getLocationAccuracy = (accuracy) => {
-  if (!accuracy) return 'UNKNOWN';
-  if (accuracy <= 10) return 'HIGH';
-  if (accuracy <= 50) return 'MEDIUM';
+export const getLocationAccuracy = (
+  accuracy
+) => {
+  if (
+    accuracy === null ||
+    accuracy === undefined ||
+    !Number.isFinite(Number(accuracy))
+  ) {
+    return 'UNKNOWN';
+  }
+
+  const numericAccuracy = Number(accuracy);
+
+  if (numericAccuracy <= 10) {
+    return 'HIGH';
+  }
+
+  if (numericAccuracy <= 50) {
+    return 'MEDIUM';
+  }
+
   return 'LOW';
 };
 
@@ -91,12 +238,17 @@ export const getLocationAccuracy = (accuracy) => {
  * Validate location coordinates
  * @param {number} latitude - Latitude value
  * @param {number} longitude - Longitude value
- * @returns {boolean} True if valid coordinates
+ * @returns {boolean}
  */
-export const validateCoordinates = (latitude, longitude) => {
+export const validateCoordinates = (
+  latitude,
+  longitude
+) => {
   return (
     typeof latitude === 'number' &&
     typeof longitude === 'number' &&
+    Number.isFinite(latitude) &&
+    Number.isFinite(longitude) &&
     latitude >= -90 &&
     latitude <= 90 &&
     longitude >= -180 &&
@@ -108,50 +260,90 @@ export const validateCoordinates = (latitude, longitude) => {
  * Format location for display
  * @param {number} latitude - Latitude value
  * @param {number} longitude - Longitude value
- * @returns {string} Formatted location string
+ * @returns {string}
  */
-export const formatLocation = (latitude, longitude) => {
-  if (!validateCoordinates(latitude, longitude)) {
+export const formatLocation = (
+  latitude,
+  longitude
+) => {
+  if (
+    !validateCoordinates(
+      latitude,
+      longitude
+    )
+  ) {
     return 'Invalid coordinates';
   }
-  return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+
+  return `${latitude.toFixed(
+    6
+  )}, ${longitude.toFixed(6)}`;
 };
 
 /**
- * Check if location services are likely spoofed (basic detection)
- * @param {Object} locationData - Location data with accuracy, speed, etc.
- * @returns {Object} Spoofing detection result
+ * Check if location services are likely spoofed
+ * @param {Object} locationData
+ * @returns {Object}
  */
-export const detectLocationSpoofing = (locationData) => {
+export const detectLocationSpoofing = (
+  locationData
+) => {
   const warnings = [];
   let suspiciousScore = 0;
 
   // Check for unrealistic accuracy
-  if (locationData.accuracy && locationData.accuracy < UNREALISTIC_ACCURACY_THRESHOLD) {
-    warnings.push('Unrealistically high accuracy');
-    suspiciousScore += SPOOFING_SCORE_ACCURACY;
+  if (
+    locationData.accuracy &&
+    locationData.accuracy <
+      UNREALISTIC_ACCURACY_THRESHOLD
+  ) {
+    warnings.push(
+      'Unrealistically high accuracy'
+    );
+
+    suspiciousScore +=
+      SPOOFING_SCORE_ACCURACY;
   }
 
-  // Check for impossible speed (if previous location available)
-  if (locationData.speed && locationData.speed > UNREALISTIC_SPEED_THRESHOLD) {
-    warnings.push('Unrealistic speed detected');
-    suspiciousScore += SPOOFING_SCORE_SPEED;
+  // Check for impossible speed
+  if (
+    locationData.speed &&
+    locationData.speed >
+      UNREALISTIC_SPEED_THRESHOLD
+  ) {
+    warnings.push(
+      'Unrealistic speed detected'
+    );
+
+    suspiciousScore +=
+      SPOOFING_SCORE_SPEED;
   }
 
-  // Check for mock location flag (Android)
+  // Check for mock location flag
   if (locationData.isMock === true) {
-    warnings.push('Mock location detected');
-    suspiciousScore += SPOOFING_SCORE_MOCK;
+    warnings.push(
+      'Mock location detected'
+    );
+
+    suspiciousScore +=
+      SPOOFING_SCORE_MOCK;
   }
 
   return {
-    isSuspicious: suspiciousScore >= SPOOFING_BLOCK_THRESHOLD,
+    isSuspicious:
+      suspiciousScore >=
+      SPOOFING_BLOCK_THRESHOLD,
+
     suspiciousScore,
+
     warnings,
+
     recommendation:
-      suspiciousScore >= SPOOFING_BLOCK_THRESHOLD
+      suspiciousScore >=
+      SPOOFING_BLOCK_THRESHOLD
         ? 'BLOCK'
-        : suspiciousScore >= SPOOFING_FLAG_THRESHOLD
+        : suspiciousScore >=
+          SPOOFING_FLAG_THRESHOLD
         ? 'FLAG'
         : 'ALLOW',
   };
@@ -159,7 +351,7 @@ export const detectLocationSpoofing = (locationData) => {
 
 /**
  * Get campus presets for common locations
- * @returns {Object} Campus location presets
+ * @returns {Object}
  */
 export const getCampusPresets = () => {
   return {
@@ -169,18 +361,21 @@ export const getCampusPresets = () => {
       longitude: 0,
       radius: 100,
     },
+
     library: {
       name: 'Library',
       latitude: 0,
       longitude: 0,
       radius: 50,
     },
+
     lab: {
       name: 'Computer Lab',
       latitude: 0,
       longitude: 0,
       radius: 75,
     },
+
     auditorium: {
       name: 'Auditorium',
       latitude: 0,
