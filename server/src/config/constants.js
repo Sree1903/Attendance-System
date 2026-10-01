@@ -95,7 +95,7 @@ export const SPOOFING_BLOCK_THRESHOLD = 5;       // score >= N = BLOCK recommend
 // TOKEN & SESSION CONFIGURATION
 // ============================================
 export const REFRESH_TOKEN_EXPIRY = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-export const QR_TOKEN_ROTATION_INTERVAL = 20000; // QR code rotation interval in ms (20 seconds)
+export const QR_TOKEN_ROTATION_INTERVAL = 60000; // QR code rotation interval in ms (20 seconds)
 
 // ============================================
 // RATE LIMITING
