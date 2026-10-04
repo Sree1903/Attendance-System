@@ -38,11 +38,9 @@ export default function FacultyDashboard() {
   const [sessionData, setSessionData] = useState({
     title: '',
     location: null,
-    sessionType: 'offline', // 'offline' or 'online'
-    onlinePlatform: 'ZOOM', // 'ZOOM', 'GOOGLE_MEET', 'TEAMS'
-    qrEnabled: true, // QR Code toggle
-    faceVerification: false, // Face liveness toggle
-    locationVerification: false, // Geofencing toggle
+    qrEnabled: true,
+    faceVerification: false,
+    locationVerification: false,
   });
   
   useEffect(() => {
@@ -137,8 +135,6 @@ export default function FacultyDashboard() {
     setSessionData({
       title: `${cls.name} - Lecture`,
       location: null,
-      sessionType: 'offline',
-      onlinePlatform: 'ZOOM',
       qrEnabled: true,
       faceVerification: false,
       locationVerification: false,
@@ -211,7 +207,6 @@ export default function FacultyDashboard() {
 
     // Location verification requires a real location before a session can start.
     if (
-      sessionData.sessionType === 'offline' &&
       sessionData.locationVerification &&
       (
         !sessionData.location ||
@@ -224,14 +219,14 @@ export default function FacultyDashboard() {
     }
 
     try {
-      // Create regular session first with verification settings
+      // All faculty sessions are offline classroom sessions.
       const { data } = await axiosInstance.post('/sessions', {
         classId: selectedClass._id,
         title: sessionData.title,
         date: new Date(),
         startTime: new Date(),
-        location: sessionData.sessionType === 'offline' ? sessionData.location : null,
-        sessionType: sessionData.sessionType.toUpperCase(),
+        location: sessionData.location,
+        sessionType: 'OFFLINE',
         qrEnabled: sessionData.qrEnabled,
         verificationRequirements: {
           qrCode: sessionData.qrEnabled,
@@ -242,58 +237,8 @@ export default function FacultyDashboard() {
 
       const sessionId = data.data.session._id;
 
-      // If online session, create Zoom/Meet/Teams meeting
-      if (sessionData.sessionType === 'online') {
-        if (sessionData.onlinePlatform === 'ZOOM') {
-          try {
-            const zoomRes = await axiosInstance.post('/zoom/create', {
-              sessionId,
-              topic: sessionData.title,
-              duration: 60,
-            });
-            
-            // Navigate to monitor page
-            setShowStartSession(false);
-            navigate(`/online-session-monitor/${zoomRes.data.data.onlineSession._id}`);
-          } catch (zoomError) {
-            // If Zoom creation fails, show error and offer manual option
-            const errorMsg = zoomError.response?.data?.message || 'Failed to create Zoom meeting';
-            const useManual = confirm(
-              `${errorMsg}\n\nWould you like to create a manual online session instead? You can add your Zoom link manually.`
-            );
-            
-            if (useManual) {
-              // Create generic online session
-              const onlineRes = await axiosInstance.post('/online-sessions', {
-                sessionId,
-                platform: 'ZOOM',
-                meetingLink: '', // Faculty can add manually
-              });
-              
-              setShowStartSession(false);
-              navigate(`/online-session-monitor/${onlineRes.data.data.onlineSession._id}`);
-            } else {
-              // Cancel and go to regular session
-              setShowStartSession(false);
-              navigate(`/session/${sessionId}`);
-            }
-          }
-        } else {
-          // For other platforms, create generic online session
-          const onlineRes = await axiosInstance.post('/online-sessions', {
-            sessionId,
-            platform: sessionData.onlinePlatform,
-            meetingLink: '', // Faculty can add manually
-          });
-          
-          setShowStartSession(false);
-          navigate(`/online-session-monitor/${onlineRes.data.data.onlineSession._id}`);
-        }
-      } else {
-        // Offline session - navigate to QR code page
-        setShowStartSession(false);
-        navigate(`/session/${sessionId}`);
-      }
+      setShowStartSession(false);
+      navigate(`/session/${sessionId}`);
     } catch (error) {
       console.error('Error starting session:', error);
       alert('Failed to start session: ' + (error.response?.data?.message || error.message));
@@ -555,63 +500,7 @@ export default function FacultyDashboard() {
                       />
                     </div>
 
-                    {/* Session Type */}
-                    <div>
-                      <label className="block text-sm font-semibold mb-3 text-gray-300">Session Type</label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          type="button"
-                          onClick={() => setSessionData({ ...sessionData, sessionType: 'offline' })}
-                          className={`p-6 border-2 rounded-xl transition-all ${
-                            sessionData.sessionType === 'offline'
-                              ? 'border-purple-500 bg-purple-600/20'
-                              : 'border-gray-700 bg-[#0f1420] hover:border-gray-600'
-                          }`}
-                        >
-                          <div className="text-4xl mb-3">🏫</div>
-                          <div className="font-bold text-lg text-white">Offline Class</div>
-                          <div className="text-xs text-gray-400 mt-1">QR Code Attendance</div>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSessionData({ ...sessionData, sessionType: 'online' })}
-                          className={`p-6 border-2 rounded-xl transition-all ${
-                            sessionData.sessionType === 'online'
-                              ? 'border-purple-500 bg-purple-600/20'
-                              : 'border-gray-700 bg-[#0f1420] hover:border-gray-600'
-                          }`}
-                        >
-                          <div className="text-4xl mb-3">💻</div>
-                          <div className="font-bold text-lg text-white">Online Class</div>
-                          <div className="text-xs text-gray-400 mt-1">Zoom/Meet/Teams</div>
-                        </button>
-                      </div>
-                    </div>
-
-                    {sessionData.sessionType === 'online' && (
-                      <div>
-                        <label className="block text-sm font-semibold mb-2 text-gray-300">Online Platform</label>
-                        <select
-                          value={sessionData.onlinePlatform}
-                          onChange={(e) => setSessionData({ ...sessionData, onlinePlatform: e.target.value })}
-                          className="w-full px-4 py-3 bg-[#0f1420] border border-gray-700 rounded-xl text-white focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                        >
-                          <option value="ZOOM">🎥 Zoom (Auto-create meeting)</option>
-                          <option value="GOOGLE_MEET">📹 Google Meet</option>
-                          <option value="TEAMS">💼 Microsoft Teams</option>
-                          <option value="WEBRTC">🌐 Custom Platform</option>
-                        </select>
-                        <p className="text-xs text-gray-400 mt-2">
-                          {sessionData.onlinePlatform === 'ZOOM' 
-                            ? '✨ Zoom meeting will be created automatically with attendance tracking'
-                            : 'You can add meeting link after creation'}
-                        </p>
-                      </div>
-                    )}
-
-                    {sessionData.sessionType === 'offline' && (
-                      <>
-                        {/* Verification Methods Section */}
+                    {/* Verification Methods Section */}
                         <div className="space-y-4 pt-4 border-t border-gray-700">
                           <h4 className="font-semibold text-white">Verification Methods</h4>
                           
@@ -697,7 +586,6 @@ export default function FacultyDashboard() {
                       <button
                         type="submit"
                         disabled={
-                          sessionData.sessionType === 'offline' &&
                           sessionData.locationVerification &&
                           (
                             !sessionData.location ||
