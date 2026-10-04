@@ -579,8 +579,6 @@ export default function FacultyDashboard() {
                             onChange={(location) => setSessionData({ ...sessionData, location })}
                           />
                         )}
-                      </>
-                    )}
 
                     <div className="flex space-x-3 pt-4">
                       <button
