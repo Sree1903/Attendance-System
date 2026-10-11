@@ -22,7 +22,7 @@
 
 <div align="center">
 
-### 🌐 **[Try ProxyMukt Live](https://campus-attendance-i93g.onrender.com/)** 
+### 🌐 **[Try Smart Attendance Management System Live](https://campus-attendance-i93g.onrender.com/)** 
 
 **Instant Access - No Installation Required!**
 
@@ -52,7 +52,7 @@ Proxy attendance is a widespread problem in educational institutions where stude
 **The Solution:**
 ProxyMukt implements a **multi-layered security approach** combining rotating QR codes, face liveness detection, GPS geofencing, device fingerprinting, and advanced proxy detection to create a fraud-proof attendance system that's impossible to bypass.
 
-> 🌐 **Experience it yourself:** [https://proxymukt.onrender.com/](https://proxymukt.onrender.com/)
+> 🌐 **Experience it yourself:** [https://campus-attendance-i93g.onrender.com](https://campus-attendance-i93g.onrender.com)
 
 ---
 
