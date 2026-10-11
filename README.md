@@ -168,19 +168,6 @@ ProxyMukt implements a **multi-layered security approach** combining rotating QR
 
 ---
 
-## 🎬 Live Demo & Screenshots
-
-### 🌐 **Try It Live:** [https://proxymukt.onrender.com/](https://proxymukt.onrender.com/)
-
-**Test Credentials:**
-- 👑 Admin: `sumant@gmail.com` / `@Sumant3086` 
-- 👨‍🏫 Faculty: `faculty1@gmail.com` / `faculty1`
-- 👨‍🎓 Student: `student1@gmail.com` / `student1`
-
-> 💡 **Tip:** Try logging in as different roles to experience the complete system!
-
----
-
 ### 📸 Application Screenshots
 
 #### 🏠 Faculty Dashboard
@@ -294,8 +281,8 @@ Before you begin, ensure you have the following installed:
 #### 1️⃣ Clone the Repository
 
 ```bash
-git clone https://github.com/your-repo/ProxyMukt-Attendance-System.git
-cd ProxyMukt-Attendance-System
+git clone https://github.com/your-repo/Attendance-System.git
+cd Attendance-System
 ```
 
 #### 2️⃣ Backend Setup
@@ -355,7 +342,7 @@ NODE_ENV=development
 PORT=5000
 
 # Database
-MONGODB_URI=mongodb://localhost:27017/proxymukt
+MONGODB_URI=your_mongodb_uri
 
 # JWT Authentication
 JWT_SECRET=your_super_secret_jwt_key_here_change_in_production
@@ -378,7 +365,7 @@ EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASS=your_app_specific_password
-EMAIL_FROM=ProxyMukt <noreply@proxymukt.com>
+EMAIL_FROM=Attendance <noreply@attendanc.com>
 ```
 
 </details>
@@ -403,10 +390,8 @@ After running `npm run seed`, use these credentials:
 | Role | Email | Password |
 |------|-------|----------|
 | 👑 **Admin** | sumant@gmail.com | @Sumant3086 |
-| 👨‍🏫 **Faculty** | faculty1@gmail.com | faculty1 |
-| 👨‍🎓 **Student** | student1@gmail.com | student1 |
-
-*Note: Faculty and students are numbered 1-50 and 1-500 respectively*
+| 👨‍🏫 **Faculty** | rajeshvenkat@gmail.com | faculty1 |
+| 👨‍🎓 **Student** | santhosh123@gmail.com | student2 |
 
 ---
 
@@ -469,7 +454,7 @@ graph LR
 ## 📁 Project Structure
 
 ```
-ProxyMukt-Attendance-System/
+Attendance-System/
 │
 ├── 📂 client/                      # React Frontend Application
 │   ├── 📂 public/                  # Static assets
@@ -723,7 +708,7 @@ ProxyMukt-Attendance-System/
 
 ### 🌐 Live Production Instance
 
-**ProxyMukt is live at:** [https://proxymukt.onrender.com/](https://proxymukt.onrender.com/)
+**Attendance-System is live at:** [https://campus-attendance-i93g.onrender.com](https://campus-attendance-i93g.onrender.com)
 
 The application is deployed on Render.com with:
 - ✅ Automatic SSL/HTTPS
@@ -817,7 +802,7 @@ We welcome contributions! Here's how you can help:
 ```bash
 # Fork the repository on GitHub
 # Then clone your fork
-git clone https://github.com/YOUR_USERNAME/ProxyMukt-Attendance-System-.git
+git clone https://github.com/YOUR_USERNAME/Attendance-System-.git
 ```
 
 ### 2️⃣ Create Branch
@@ -1005,7 +990,5 @@ Need help? We're here for you!
 *Eliminating proxy attendance, one scan at a time* 🎓
 
 ---
-
-**[⬆ Back to Top](#-proxymukt)**
 
 </div>
