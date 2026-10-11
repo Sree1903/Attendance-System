@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎓 ProxyMukt
+# 🎓 Smart Attendance Management System
 
 ### *Intelligent Attendance System That Eliminates Proxy Attendance*
 
@@ -10,7 +10,7 @@
 [![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)](https://nodejs.org/)
 [![MongoDB](https://img.shields.io/badge/mongodb-%3E%3D6.0-green.svg)](https://www.mongodb.com/)
 
-### 🚀 **[Live Demo](https://proxymukt.onrender.com/)** 🚀
+### 🚀 **[Live Demo](https://campus-attendance-i93g.onrender.com/)** 🚀
 
 [Features](#-features) • [Screenshots](#-screenshots) • [Installation](#-installation) • [Tech Stack](#-tech-stack) • [Documentation](#-documentation)
 
@@ -22,15 +22,15 @@
 
 <div align="center">
 
-### 🌐 **[Try ProxyMukt Live](https://proxymukt.onrender.com/)** 
+### 🌐 **[Try ProxyMukt Live](https://campus-attendance-i93g.onrender.com/)** 
 
 **Instant Access - No Installation Required!**
 
 | Role | Email | Password |
 |:----:|:-----:|:--------:|
 | 👑 **Admin** | `sumant@gmail.com` | `@Sumant3086` |
-| 👨‍🏫 **Faculty** | `faculty1@gmail.com` | `faculty1` |
-| 👨‍🎓 **Student** | `student1@gmail.com` | `student1` |
+| 👨‍🏫 **Faculty** | `rajeshvenkat@gmail.com` | `faculty1` |
+| 👨‍🎓 **Student** | `santhosh123@gmail.com` | `student2` |
 
 *Experience the full power of multi-layer fraud detection in action!*
 
